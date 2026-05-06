@@ -1,0 +1,20 @@
+[package]
+name = "lattice-python"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+name = "lattice_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+lattice-core = { path = "../lattice-core" }
+pyo3 = { version = "0.28", features = ["extension-module"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+tracing = "0.1"
+futures = "0.3"
+
+[dev-dependencies]
+pyo3 = { version = "0.28", features = ["auto-initialize"] }
