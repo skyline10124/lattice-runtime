@@ -15,19 +15,20 @@ pub mod events_provider;
 
 use std::collections::HashMap;
 
-use async_trait::async_trait;
 use crate::core::retry::RetryPolicy;
 use crate::core::streaming::StreamEvent;
 use crate::tools::ToolExecutor;
+use async_trait::async_trait;
 
 // Re-export tool types for backward compatibility
-pub use crate::tools::{default_tool_definitions, DefaultToolExecutor, RegistryToolAccess, SandboxConfig};
-pub use crate::tools::tool_registry;
 use crate::core::types::{Role, ToolDefinition};
 use crate::core::ResolvedModel;
+pub use crate::tools::tool_registry;
+pub use crate::tools::{
+    default_tool_definitions, DefaultToolExecutor, RegistryToolAccess, SandboxConfig,
+};
 
 use prompt::MemoryProvider;
-
 
 /// Max retries for mid-stream errors in Agent::run().
 const MAX_STREAM_RETRIES: u32 = 2;
@@ -64,8 +65,13 @@ pub trait PluginAgent {
         self.send(message).await
     }
     fn set_system_prompt(&mut self, _prompt: &str) {}
-    fn set_system_prompt_delta(&mut self, _delta: Option<crate::agent::prompt::SystemPromptDelta>) {}
-    fn set_output_contract_delta(&mut self, _delta: Option<crate::agent::prompt::SystemPromptDelta>) {}
+    fn set_system_prompt_delta(&mut self, _delta: Option<crate::agent::prompt::SystemPromptDelta>) {
+    }
+    fn set_output_contract_delta(
+        &mut self,
+        _delta: Option<crate::agent::prompt::SystemPromptDelta>,
+    ) {
+    }
     fn add_tools(&mut self, _tools: Vec<crate::core::types::ToolDefinition>) {}
     fn token_usage(&self) -> u64 {
         0
@@ -680,8 +686,8 @@ impl PluginAgent for Agent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use crate::core::catalog::ApiProtocol;
+    use async_trait::async_trait;
     use std::collections::HashMap;
 
     fn make_resolved(context_length: u32) -> ResolvedModel {

@@ -113,7 +113,7 @@ pub enum LatticeError {
 /// Classifies HTTP error responses into typed `LatticeError` variants
 /// based on status codes. Body-text pattern matching (context overflow
 /// signals, billing vs rate-limit disambiguation) is handled entirely
-/// by the Rust classifier — no Python-side delegation.
+/// by the Rust classifier.
 pub struct ErrorClassifier;
 
 impl ErrorClassifier {
