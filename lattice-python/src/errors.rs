@@ -1,12 +1,12 @@
-use lattice_core::errors::LatticeError as CoreError;
+use lattice::core::errors::LatticeError as CoreError;
 use pyo3::create_exception;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 
 macro_rules! define_exceptions {
     ($base:ident, [$($name:ident),+ $(,)?]) => {
-        create_exception!(lattice_core, $base, PyException);
-        $(create_exception!(lattice_core, $name, $base);)+
+        create_exception!(lattice, $base, PyException);
+        $(create_exception!(lattice, $name, $base);)+
     };
 }
 

@@ -5,11 +5,11 @@ license.workspace = true
 edition.workspace = true
 
 [lib]
-name = "lattice_core"
+name = "lattice"
 crate-type = ["cdylib"]
 
 [dependencies]
-lattice-core = { path = "../lattice-core" }
+lattice = { path = "../lattice" }
 pyo3 = { version = "0.28", features = ["extension-module"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread"] }

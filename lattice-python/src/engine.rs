@@ -1,18 +1,25 @@
 use std::collections::HashMap;
 use std::sync::mpsc;
-use std::sync::RwLock;
 use std::sync::{LazyLock, Mutex};
 
-use lattice_core::catalog::{CredentialStatus, ResolvedModel};
-use lattice_core::provider::ChatResponse;
-use lattice_core::router::ModelRouter;
-use lattice_core::types::{FunctionCall, Message, Role, ToolCall, ToolDefinition};
+use lattice::core::catalog::{CredentialStatus, ResolvedModel};
+use lattice::core::provider::ChatResponse;
+use lattice::core::types::{FunctionCall, Message, Role, ToolCall, ToolDefinition};
+use lattice::runtime::Runtime;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyList};
 use pyo3::Py;
 
 use crate::errors::convert_core_error;
+
+fn convert_runtime_error(err: lattice::runtime::RuntimeError) -> PyErr {
+    match err {
+        lattice::runtime::RuntimeError::Core(core) => convert_core_error(core),
+        lattice::runtime::RuntimeError::Config(message)
+        | lattice::runtime::RuntimeError::Assembly(message) => PyRuntimeError::new_err(message),
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Shared tokio runtime for bridging sync → async in PyO3 methods
@@ -230,7 +237,7 @@ fn chat_response_to_py(py: Python<'_>, response: ChatResponse) -> PyResult<Py<Py
 /// Python-facing model resolver.
 #[pyclass]
 pub struct LatticeEngine {
-    router: RwLock<ModelRouter>,
+    runtime: Runtime,
 }
 
 #[pymethods]
@@ -238,12 +245,12 @@ impl LatticeEngine {
     #[new]
     #[pyo3(signature = (credentials=None))]
     pub fn new(credentials: Option<HashMap<String, String>>) -> Self {
-        let router = match credentials {
-            Some(map) => ModelRouter::with_credentials(map),
-            None => ModelRouter::new(),
-        };
+        let mut builder = Runtime::builder();
+        if let Some(map) = credentials {
+            builder = builder.credentials(map);
+        }
         Self {
-            router: RwLock::new(router),
+            runtime: builder.build(),
         }
     }
 
@@ -255,36 +262,22 @@ impl LatticeEngine {
         model: &str,
         provider_override: Option<&str>,
     ) -> PyResult<PyResolvedModel> {
-        let router = self.router.read().unwrap_or_else(|e| {
-            tracing::warn!("RwLock poisoned in LatticeEngine::resolve_model, recovering");
-            e.into_inner()
-        });
-
-        let resolved = router
-            .resolve(model, provider_override)
-            .map_err(convert_core_error)?;
+        let resolved = self
+            .runtime
+            .resolve_with_provider(model, provider_override)
+            .map_err(convert_runtime_error)?;
 
         Ok(PyResolvedModel { inner: resolved })
     }
 
     /// List all canonical model IDs.
     pub fn list_models(&self) -> Vec<String> {
-        let router = self.router.read().unwrap_or_else(|e| {
-            tracing::warn!("RwLock poisoned in LatticeEngine::list_models, recovering");
-            e.into_inner()
-        });
-        router.list_models()
+        self.runtime.list_models()
     }
 
     /// List models with valid credentials.
     pub fn list_authenticated_models(&self) -> Vec<String> {
-        let router = self.router.read().unwrap_or_else(|e| {
-            tracing::warn!(
-                "RwLock poisoned in LatticeEngine::list_authenticated_models, recovering"
-            );
-            e.into_inner()
-        });
-        router.list_authenticated_models()
+        self.runtime.list_authenticated_models()
     }
 
     /// Send messages to a resolved model and return the complete response.
@@ -311,12 +304,12 @@ impl LatticeEngine {
             Some(t) => tools_from_py(py, t)?,
             None => Vec::new(),
         };
-        let resolved_inner = resolved.inner.clone();
+        let runtime = self.runtime.clone();
+        let model = resolved.inner.canonical_id.clone();
 
-        let response = run_async(async move {
-            lattice_core::chat_complete(&resolved_inner, &msgs, &tool_defs).await
-        })?
-        .map_err(convert_core_error)?;
+        let response =
+            run_async(async move { runtime.chat_complete(&model, &msgs, &tool_defs).await })?
+                .map_err(convert_runtime_error)?;
 
         chat_response_to_py(py, response)
     }
@@ -347,11 +340,12 @@ impl LatticeEngine {
             Some(t) => tools_from_py(py, t)?,
             None => Vec::new(),
         };
-        let resolved_inner = resolved.inner.clone();
+        let runtime = self.runtime.clone();
+        let model = resolved.inner.canonical_id.clone();
 
         let (tx, rx) = mpsc::sync_channel(32);
         SHARED_RUNTIME.spawn(async move {
-            let stream = match lattice_core::chat(&resolved_inner, &msgs, &tool_defs).await {
+            let stream = match runtime.stream_chat(&model, &msgs, &tool_defs).await {
                 Ok(s) => s,
                 Err(e) => {
                     let _ = tx.send(serde_json::json!({"type": "error", "content": e.to_string()}));
@@ -363,25 +357,25 @@ impl LatticeEngine {
             let mut s = stream;
             while let Some(event) = s.next().await {
                 let json_val = match event {
-                    lattice_core::StreamEvent::Token { content } => {
+                    lattice::core::StreamEvent::Token { content } => {
                         serde_json::json!({"type": "token", "content": content})
                     }
-                    lattice_core::StreamEvent::Reasoning { content } => {
+                    lattice::core::StreamEvent::Reasoning { content } => {
                         serde_json::json!({"type": "reasoning", "content": content})
                     }
-                    lattice_core::StreamEvent::ToolCallStart { id, name } => {
+                    lattice::core::StreamEvent::ToolCallStart { id, name } => {
                         serde_json::json!({"type": "tool_call_start", "id": id, "name": name})
                     }
-                    lattice_core::StreamEvent::ToolCallDelta {
+                    lattice::core::StreamEvent::ToolCallDelta {
                         id,
                         arguments_delta,
                     } => {
                         serde_json::json!({"type": "tool_call_delta", "id": id, "arguments_delta": arguments_delta})
                     }
-                    lattice_core::StreamEvent::ToolCallEnd { id } => {
+                    lattice::core::StreamEvent::ToolCallEnd { id } => {
                         serde_json::json!({"type": "tool_call_end", "id": id})
                     }
-                    lattice_core::StreamEvent::Done {
+                    lattice::core::StreamEvent::Done {
                         finish_reason,
                         usage,
                     } => {
@@ -396,7 +390,7 @@ impl LatticeEngine {
                         }
                         d
                     }
-                    lattice_core::StreamEvent::Error { message } => {
+                    lattice::core::StreamEvent::Error { message } => {
                         serde_json::json!({"type": "error", "content": message})
                     }
                 };

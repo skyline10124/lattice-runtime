@@ -10,7 +10,7 @@ macro_rules! register_exceptions {
 }
 
 #[pymodule]
-fn lattice_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn lattice(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", "0.1.0")?;
 
     register_exceptions!(
