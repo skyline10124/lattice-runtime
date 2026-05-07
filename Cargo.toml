@@ -1,10 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "lattice-core",
-    "lattice-agent",
-    "lattice-plugin",
-    "lattice-bus",
+    "lattice",
     "lattice-python",
 ]
 
