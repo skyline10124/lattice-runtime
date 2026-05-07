@@ -3,7 +3,7 @@
 //! Each test exercises a full pipeline scenario:
 //!   resolve model → get provider → call with ResolvedModel → process response
 //!
-//! All tests use pure Rust types — no Python runtime required.
+//! All tests use pure Rust types.
 
 /// Global mutex for env var isolation across all e2e tests.
 /// Any test that sets/removes env vars MUST acquire this lock first

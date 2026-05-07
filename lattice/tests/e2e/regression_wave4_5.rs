@@ -978,8 +978,7 @@ fn tool_definition_serialization_roundtrip() {
 
 #[test]
 fn tool_definition_parameters_must_be_object() {
-    // While the Rust struct doesn't enforce this, the PyO3 #[new] does.
-    // This test verifies that the struct is constructible in Rust with any JSON.
+    // The Rust struct stores raw JSON and leaves schema validation to callers.
     let td = ToolDefinition {
         name: "test".to_string(),
         description: "test".to_string(),
