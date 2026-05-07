@@ -2,7 +2,7 @@
 
 ![LATTICE banner](../logo-banner.svg)
 
-This wiki documents the runtime repository: the crates that execute model calls, run agents, expose plugin contracts, orchestrate pipelines and provide Python bindings.
+This wiki documents the runtime repository: the Rust modules that execute model calls, run agents, expose plugin contracts and orchestrate pipelines.
 
 ## Quick Navigation
 
@@ -16,12 +16,13 @@ This wiki documents the runtime repository: the crates that execute model calls,
 | Security model | [architecture/security](architecture/security.md) |
 | Plugin contract | [reference/plugin-contract](reference/plugin-contract.md) |
 | Streaming events | [reference/streaming](reference/streaming.md) |
-| Python binding | [api/python](api/python.md) |
 | Testing | [development/testing](development/testing.md) |
 
 ## Status
 
-Runtime is the main execution repository. It includes `lattice-core`, `lattice-agent`, `lattice-plugin`, `lattice-bus` and `lattice-python`.
+Runtime is the main execution repository. It includes the `lattice` Rust crate with core, agent, plugin, bus and runtime modules.
+
+`lattice::runtime::Runtime` is the preferred Rust seam. It owns router, profile registry, plugin registry, tool registry, memory, events and pipeline construction, so Swarm and other Rust frontends do not need to wire lower modules manually.
 
 Official plugins are not part of Runtime. They live in `LATTICE-Plugins` and depend on Runtime contracts.
 
@@ -29,6 +30,5 @@ Official plugins are not part of Runtime. They live in `LATTICE-Plugins` and dep
 
 - Runtime must not depend on Swarm or Plugins.
 - `lattice-plugin` must define plugin contracts and loading mechanics, not official plugin implementations.
-- Shared types used by multiple runtime crates belong in `lattice-core`.
-- Python bindings call runtime crates; runtime crates do not call Python.
+- Shared types used by multiple runtime modules belong in `lattice::core`.
 - Security checks for model endpoints and tools must live on the Rust execution path.

@@ -41,8 +41,15 @@ lattice-bus
   ├── watcher
   └── WebSocket serving
 
-lattice-python
-  └── PyO3 adapter over lattice-core
+lattice-runtime
+  ├── Runtime
+  ├── RuntimeBuilder
+  ├── shared ModelRouter
+  ├── shared AgentRegistry
+  ├── shared PluginRegistry
+  ├── shared ToolRegistry
+  ├── shared memory and events
+  └── RuntimeHandle
 ```
 
 ## Dependency Rules
@@ -50,8 +57,7 @@ lattice-python
 Runtime crates follow a one-way dependency direction:
 
 ```text
-core ← agent ← plugin ← bus
-core ← python
+core ← agent ← plugin ← bus ← runtime
 ```
 
 The arrows point toward the dependency. Lower crates do not know about higher crates.
@@ -84,8 +90,9 @@ Agent::run
 Pipeline call:
 
 ```text
-Pipeline::run
-  → AgentRegistry loads TOML profiles
+Runtime::run_pipeline
+  → Runtime-owned AgentRegistry
+  → Runtime-built Pipeline
   → AgentRunner or PluginDagRunner
   → handoff rules and fork targets
   → events published to bus
@@ -95,10 +102,11 @@ Pipeline::run
 
 Runtime exposes contracts that other repositories consume:
 
-- `lattice_core::types`: messages, roles, tools and behavior modes.
-- `lattice_core::handoff`: handoff condition/rule/target evaluation.
-- `lattice_plugin::Plugin`: typed plugin interface.
-- `lattice_plugin::registry::PluginRegistry`: runtime registry for official or local plugins.
-- `lattice_bus::Pipeline`: profile-driven execution API for CLI/TUI callers.
+- `lattice::core::types`: messages, roles, tools and behavior modes.
+- `lattice::core::handoff`: handoff condition/rule/target evaluation.
+- `lattice::plugin::Plugin`: typed plugin interface.
+- `lattice::plugin::registry::PluginRegistry`: runtime registry for official or local plugins.
+- `lattice::runtime::Runtime`: preferred frontend seam for model, agent and pipeline execution.
+- `lattice::bus::Pipeline`: lower-level profile-driven execution implementation.
 
 Runtime does not expose official plugin implementations.

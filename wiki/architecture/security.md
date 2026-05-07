@@ -4,7 +4,7 @@ Runtime security is enforced on the Rust execution path.
 
 ## Model Endpoint Safety
 
-Base URL validation happens in `ModelRouter::resolve()`. This ensures all callers, including Python callers, go through the same validation.
+Base URL validation happens in `ModelRouter::resolve()`. This ensures all Rust callers go through the same validation.
 
 Validation covers:
 

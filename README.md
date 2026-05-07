@@ -2,7 +2,9 @@
 
 ![LATTICE banner](logo-banner.svg)
 
-Runtime is the execution core of LATTICE. It owns model resolution, provider transport, streaming, retry policy, agent execution, tool safety, pipeline orchestration, plugin contracts, bus events, WebSocket serving, and the Python binding.
+Runtime is the Rust execution core of LATTICE. It owns model resolution, provider transport, streaming, retry policy, agent execution, tool safety, pipeline orchestration, plugin contracts, bus events, and WebSocket serving.
+
+The preferred Rust interface is `lattice::runtime::Runtime`. It owns the shared model router, profile registry, plugin registry, tool registry, memory, event bus, and pipeline construction policy. Lower modules remain public for extension, but application entrypoints should not manually wire agents and pipelines unless they are building a new runtime adapter.
 
 Official plugin implementations are deliberately outside this repository. They live in [LATTICE-Plugins](https://github.com/Skyline10124/LATTICE-Plugins). The user-facing CLI/TUI entrypoint lives in [LATTICE-Swarm](https://github.com/Skyline10124/LATTICE-Swarm).
 
@@ -10,28 +12,25 @@ Official plugin implementations are deliberately outside this repository. They l
 
 ```text
 LATTICE-Runtime/
-├── lattice-core/      model catalog, router, transports, streaming, retry, shared contracts
-├── lattice-agent/     async agent loop, tools, sandbox, memory, prompt compiler, hooks
-├── lattice-plugin/    Plugin trait, registry, manifest loader, erased runner, DAG runner
-├── lattice-bus/       pipeline profiles, event bus, micro-agent RPC, watcher, WebSocket
-└── lattice-python/    PyO3 binding for model resolution, chat and streaming
+└── lattice/           Rust runtime crate: core, agent, plugin, bus and runtime modules
 ```
 
-Dependency direction is internal and one-way:
+The Rust crate keeps a one-way internal module direction:
 
 ```text
-lattice-core
+core
   ↑
-lattice-agent
+agent
   ↑
-lattice-plugin
+plugin
   ↑
-lattice-bus
+bus
+  ↑
+runtime
 
-lattice-python → lattice-core
 ```
 
-`lattice-plugin` contains runtime plugin contracts only. It does not contain official plugins.
+`lattice::plugin` contains runtime plugin contracts only. It does not contain official plugins.
 
 ## Build
 
@@ -53,6 +52,22 @@ The workspace is a normal Cargo workspace. No external service is required for u
 - `Plugin`: typed LLM function contract; runtime runs it but does not ship official implementations.
 - `Pipeline`: profile-driven agent orchestration with handoff and fork control flow.
 - `Bus`: in-memory RPC/pub-sub fabric for runtime events and micro-agents.
+- `Runtime`: deep module that owns router/registries/memory/events and exposes resolve, chat, agent, and pipeline execution.
+
+## Runtime Interface
+
+```rust
+use lattice::runtime::Runtime;
+
+# async fn example() -> Result<(), Box<dyn std::error::Error>> {
+let runtime = Runtime::builder().build();
+let model = runtime.resolve("sonnet")?;
+let run = runtime.run_pipeline("reviewer", "review this change").await;
+# Ok(())
+# }
+```
+
+`Runtime` is the seam Swarm and other Rust frontends should target. It gives callers leverage by hiding construction order, registry sharing, model router reuse, event bus wiring, micro-agent construction, and plugin/tool registry attachment behind one interface.
 
 ## Documentation
 
@@ -65,7 +80,6 @@ Key pages:
 - [Model Resolution](wiki/architecture/model-resolution.md)
 - [Streaming](wiki/reference/streaming.md)
 - [Plugin Runtime Contract](wiki/reference/plugin-contract.md)
-- [Python Binding](wiki/api/python.md)
 - [Testing](wiki/development/testing.md)
 
 ## Repository Relationships

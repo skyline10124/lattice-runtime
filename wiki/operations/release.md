@@ -21,9 +21,9 @@ cd ../LATTICE-Swarm && git submodule update --remote LATTICE-Runtime && cargo ch
 
 Runtime changes that affect these surfaces require coordinated downstream updates:
 
-- `lattice_core::types`
-- `lattice_core::handoff`
-- `lattice_plugin::Plugin`
-- `lattice_plugin::registry`
-- `lattice_bus::profile`
-- Python module names and exception classes
+- `lattice::core::types`
+- `lattice::core::handoff`
+- `lattice::plugin::Plugin`
+- `lattice::plugin::registry`
+- `lattice::bus::profile`
+- `lattice::runtime::Runtime`

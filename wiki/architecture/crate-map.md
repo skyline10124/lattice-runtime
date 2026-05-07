@@ -6,7 +6,7 @@
 | `lattice-agent` | Agent state, prompt assembly, tool execution, sandbox, memory, hooks, audit | `lattice-core` |
 | `lattice-plugin` | Plugin trait, erased runner, registry, manifest loader, DAG runner, behavior policies | `lattice-core`, `lattice-agent` |
 | `lattice-bus` | Pipeline, profile loading, agent runner, event bus, watcher, micro-agent RPC, WebSocket serving | `lattice-core`, `lattice-agent`, `lattice-plugin` |
-| `lattice-python` | PyO3 binding for Python callers | `lattice-core` |
+| `lattice-runtime` | Deep runtime interface that owns router, registries, memory, event bus and pipeline construction | `lattice-core`, `lattice-agent`, `lattice-plugin`, `lattice-bus` |
 
 ## `lattice-core`
 
@@ -60,10 +60,12 @@ Important modules:
 - `ws.rs`: WebSocket bridge.
 - `watcher.rs`: profile hot reload.
 
-## `lattice-python`
+## `lattice-runtime`
 
 Important modules:
 
-- `engine.rs`: `LatticeEngine`, resolve, chat and stream conversion.
-- `errors.rs`: Python exception mapping.
-- `lib.rs`: PyO3 module registration.
+- `lib.rs`: `Runtime`, `RuntimeBuilder`, `RuntimeConfig`, `RuntimeParts` and `RuntimeHandle`.
+- `Runtime::resolve()`: shared model router access.
+- `Runtime::chat_complete()` and `Runtime::stream_chat()`: direct model execution through the shared router.
+- `Runtime::assemble_agent()` and `Runtime::run_agent()`: profile-backed agent execution.
+- `Runtime::pipeline()` and `Runtime::run_pipeline()`: pipeline construction with shared model router, plugin registry, tool registry, memory and event bus.

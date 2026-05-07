@@ -23,7 +23,7 @@ If the model is not in the catalog but uses `provider/model` form, Runtime can r
 
 ## Security
 
-`ModelRouter::resolve()` validates provider base URLs on the Rust path. The validation rejects malformed URLs and private or reserved network targets where they are not explicitly allowed. This keeps Rust callers and Python callers under the same security contract.
+`ModelRouter::resolve()` validates provider base URLs on the Rust path. The validation rejects malformed URLs and private or reserved network targets where they are not explicitly allowed. This keeps all Rust callers under the same security contract.
 
 ## Credential Sources
 
